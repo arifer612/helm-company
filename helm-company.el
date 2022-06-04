@@ -214,10 +214,12 @@ annotations.")
     str))
 
 (defun helm-company--make-display-string (candidate annotation)
-  (let ((candidate (substring-no-properties candidate)))
+  (let ((candidate (substring-no-properties candidate))
+        (icon (funcall company-format-margin-function candidate nil)))
     (if (null annotation)
-        candidate
-      (concat candidate " " (helm-company--propertize-annotation annotation)))))
+        (concat icon candidate)
+      (concat icon candidate " "
+              (helm-company--propertize-annotation annotation)))))
 
 (defun helm-company--get-annotations (candidate)
   "Return the annotation (if any) supplied for a candidate by
