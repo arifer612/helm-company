@@ -61,6 +61,13 @@ face."
   :group 'helm-company
   :type 'boolean )
 
+(defcustom helm-company-show-icons t
+  "Show icons provided by company-backend when completing.
+
+Set it to `nil' if you want to hide the icons."
+  :group 'helm-company
+  :type 'boolean )
+
 (defcustom helm-company-initialize-pattern-with-prefix nil
   "Use the thing-at-point as the initial helm completion pattern.
 
@@ -214,10 +221,14 @@ annotations.")
     str))
 
 (defun helm-company--make-display-string (candidate annotation)
-  (let ((candidate (substring-no-properties candidate)))
+  (let ((candidate (substring-no-properties candidate))
+        (icon (if helm-company-show-icons
+                  (funcall company-format-margin-function candidate nil)
+                "")))
     (if (null annotation)
-        candidate
-      (concat candidate " " (helm-company--propertize-annotation annotation)))))
+        (concat icon candidate)
+      (concat icon candidate " "
+              (helm-company--propertize-annotation annotation)))))
 
 (defun helm-company--get-annotations (candidate)
   "Return the annotation (if any) supplied for a candidate by
