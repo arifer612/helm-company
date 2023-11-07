@@ -185,9 +185,9 @@ annotations.")
   "Temporarily show the documentation BUFFER."
   (with-current-buffer buffer
     (goto-char (point-min)))
-  (display-buffer buffer
-                  '((display-buffer-same-window . t)
-                    (display-buffer-reuse-window . t))))
+  (let ((display-buffer-alist '((".*" display-buffer-in-side-window)
+                                (".*" display-buffer-reuse-window))))
+    (display-buffer buffer t)))
 
 (defmacro helm-company-run-action (&rest body)
   `(with-helm-window
