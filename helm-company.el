@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Ralston <Sodel-the-Vociferous@users.noreply.github.com>
 ;; Version: 0.2.5
 ;; URL: https://github.com/Sodel-the-Vociferous/helm-company
-;; Package-Requires: ((helm "1.5.9") (company "0.6.13"))
+;; Package-Requires: ((helm "1.5.9") (company "0.10.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
