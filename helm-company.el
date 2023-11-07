@@ -4,7 +4,7 @@
 
 ;; Author: Yasuyuki Oka <yasuyk@gmail.com>
 ;; Maintainer: Daniel Ralston <Sodel-the-Vociferous@users.noreply.github.com>
-;; Version: 0.2.2
+;; Version: 0.2.5
 ;; URL: https://github.com/Sodel-the-Vociferous/helm-company
 ;; Package-Requires: ((helm "1.5.9") (company "0.6.13"))
 
@@ -107,7 +107,7 @@ annotations.")
   (helm-attrset 'company-prefix company-prefix)
   (helm-attrset 'company-backend company-backend)
   (setq helm-company-help-window nil)
-  (if (<= (length company-candidates) 1)
+  (if (< (length company-candidates) 1)
       (helm-exit-minibuffer)
     (setq helm-company-backend                 company-backend
           helm-company-candidates              company-candidates
@@ -130,10 +130,11 @@ annotations.")
          (company-backend (helm-attr 'company-backend))
          (company-common (helm-attr 'company-common))
          (company-prefix (helm-attr 'company-prefix)))
-    (company-finish candidate))
-  (run-hooks 'helm-company-after-completion-hooks)
-  ;; for GC
-  (helm-company-cleanup-post-action))
+    ;; `company-manual-begin' keeps company from throwing an error in
+    ;; `company-post-command', its post-command hook.
+    (when (company-manual-begin)
+      (company-finish candidate)
+      (run-hooks 'helm-company-after-completion-hooks))))
 
 (defun helm-company-action-show-document (candidate)
   "Show the documentation of the CANDIDATE."
@@ -189,7 +190,10 @@ annotations.")
        (if (fboundp 'with-helm-display-same-window)
            (with-helm-display-same-window
             ,@body)
-         ,@body))))
+         ,@body)
+
+       ;; For GC
+       (setq helm-company--display-candidates-hash nil))))
 
 (defun helm-company-run-show-doc-buffer ()
   "Run showing documentation action from `helm-company'."
@@ -216,21 +220,12 @@ annotations.")
       (concat candidate " " (helm-company--propertize-annotation annotation)))))
 
 (defun helm-company--get-annotations (candidate)
-  "Return a list of the annotations (if any) supplied for a
-candidate by company-backend.
-
-When getting annotations from `company-backend', first it tries
-with the `candidate' arg. If that doesn't work, it gets the
-original candidate string(s) from
-`helm-company-display-candidates-hash', and tries with those."
-  (company-call-backend 'annotation candidate))
-
-(defun helm-company--make-display-candidate-pairs (candidates)
-  (cl-loop for cand in candidates
-           append
-           (cl-loop for annot in (helm-company--get-annotations cand)
-                    collect (cons (helm-company--make-display-string cand annot)
-                                  cand))))
+  "Return the annotation (if any) supplied for a candidate by
+company-backend."
+  (let ((annot (company-call-backend 'annotation candidate)))
+    (if (null annot)
+        nil
+      (helm-company--clean-string annot))))
 
 (defun helm-company--make-display-candidate-hash (candidates)
   (let ((hash (make-hash-table :test 'equal :size 1000)))
@@ -240,24 +235,6 @@ original candidate string(s) from
              for key = (substring-no-properties display-str)
              do (puthash key (cons display-str candidate) hash))
     hash))
-
-(defun helm-company-add-annotations-transformer-1 (candidates &optional sort)
-  (with-helm-current-buffer
-    (let ((results (helm-company--make-display-candidate-pairs candidates)))
-      (if sort
-          (sort results #'helm-generic-sort-fn)
-        results))))
-
-(defun helm-company-add-annotations-transformer (candidates _source)
-  "Transform a flat list of completion candidate strings
-into (DISPLAY . REAL) pairs.
-
-The display strings have the company-provided annotation
-appended, and formatted in the `company-tooltip-annotation'
-face."
-  (if (or (not helm-company-show-annotations) (consp (car candidates)))
-      candidates
-    (helm-company-add-annotations-transformer-1 candidates (null helm--in-fuzzy))))
 
 (defun helm-company-get-display-strings ()
   (let ((sort (null helm--in-fuzzy))
@@ -274,6 +251,29 @@ face."
   (let ((display-strs (mapcar 'substring-no-properties display-strs)))
     (mapcar (lambda (display-str) (car (gethash display-str helm-company-display-candidates-hash)))
             display-strs)))
+
+;; Taken verbatim from `company--clean-string'. I don't use that function
+;; directly because it's a private function inside `company', so I can't rely on
+;; it. I have copied it here.
+(defun helm-company--clean-string (str)
+  (replace-regexp-in-string
+   "\\([^[:graph:] ]\\)\\|\\(\ufeff\\)\\|[[:multibyte:]]"
+   (lambda (match)
+     (cond
+      ((match-beginning 1)
+       ;; FIXME: Better char for 'non-printable'?
+       ;; We shouldn't get any of these, but sometimes we might.
+       "\u2017")
+      ((match-beginning 2)
+       ;; Zero-width non-breakable space.
+       "")
+      ((> (string-width match) 1)
+       (concat
+        (make-string (1- (string-width match)) ?\ufeff)
+        match))
+      (t match)))
+   str))
+
 
 (defvar helm-company-map
   (let ((keymap (make-sparse-keymap)))
@@ -317,13 +317,18 @@ It is useful to narrow candidates."
   (interactive)
   (unless company-candidates
     (company-complete)
-    ;; (company-call-frontends 'hide) Work around a quirk with company.
-    ;; `company-complete' inserts the common part of all candidates into the
-    ;; buffer. But, it doesn't update `company-prefix' -- and `company-prefix'
-    ;; is all `company-finish' replaces in the buffer. (issue #9)
+    ;; Work around a quirk with company. `company-complete' inserts the common
+    ;; part of all candidates into the buffer. But, it doesn't update
+    ;; `company-prefix' -- and `company-prefix' is all `company-finish' replaces
+    ;; in the buffer. (issue #9)
     (when company-common
       (setq company-prefix company-common)))
-  (let ((initial-pattern (and helm-company-initialize-pattern-with-prefix company-prefix)))
+  (let ((initial-pattern (and helm-company-initialize-pattern-with-prefix
+                              company-prefix))
+
+        ;; Abort company completion & hide company frontend if we keyboard-quit
+        ;; (C-g) out of `helm-company'.
+        (helm-quit-hook (cons 'company-abort helm-quit-hook)))
     (when company-point
       (helm :sources 'helm-source-company
             :buffer  "*helm company*"
