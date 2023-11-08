@@ -81,6 +81,11 @@ you're trying to complete."
   :type 'hook
   :group 'helm-company)
 
+(defcustom helm-company-fuzzy-match t
+  "Enable fuzzy matching for Helm Company."
+  :type 'boolean
+  :group 'helm-company)
+
 (defvar helm-company-help-window nil)
 (defvar helm-company-candidates nil)
 (defvar helm-company-backend nil)
@@ -299,10 +304,6 @@ company-backend."
     ("Show documentation (If available)" . helm-company-action-show-document)
     ("Find location (If available)" . helm-company-find-location))
   "Actions for `helm-company'.")
-
-(defcustom helm-company-fuzzy-match t
-  "Enable fuzzy matching for Helm Company."
-  :type 'boolean)
 
 (defvar helm-source-company
   (helm-build-in-buffer-source "Company"
