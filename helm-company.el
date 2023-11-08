@@ -327,25 +327,37 @@ company-backend."
   "Select `company-complete' candidates by `helm'.
 It is useful to narrow candidates."
   (interactive)
-  (unless company-candidates
-    (company-complete)
-    ;; Work around a quirk with company. `company-complete' inserts the common
-    ;; part of all candidates into the buffer. But, it doesn't update
-    ;; `company-prefix' -- and `company-prefix' is all `company-finish' replaces
-    ;; in the buffer. (issue #9)
-    (when company-common
-      (setq company-prefix company-common)))
-  (let ((initial-pattern (and helm-company-initialize-pattern-with-prefix
-                              company-prefix))
 
-        ;; Abort company completion & hide company frontend if we keyboard-quit
-        ;; (C-g) out of `helm-company'.
-        (helm-quit-hook (cons 'company-abort helm-quit-hook)))
-    (when company-point
-      (helm :sources 'helm-source-company
-            :buffer  "*helm company*"
-            :input initial-pattern
-            :candidate-number-limit helm-company-candidate-number-limit))))
+  (cond ((and company-candidates
+              (= 1 (length company-candidates)))
+         ;; If there is exactly one company candidate, insert it without running
+         ;; helm. (FIXES #20).
+         (company-complete))
+        (t
+         (unless company-candidates
+           ;; If there are no candidates yet, have company generate them for us.
+           ;; Otherwise, running this function a second time would not work as
+           ;; desired.
+           (company-complete))
+         (when company-common
+           ;; Work around a quirk with company. `company-complete' inserts the common
+           ;; part of all candidates into the buffer. But, it doesn't update
+           ;; `company-prefix' -- and `company-prefix' is all `company-finish' replaces
+           ;; in the buffer. (issue #9)
+           (setq company-prefix company-common))
+         (let ((initial-pattern (and helm-company-initialize-pattern-with-prefix
+                                     company-prefix))
+               ;; Hook to abort company completion & hide company frontend if we
+               ;; keyboard-quit (C-g) out of `helm-company'.
+               (helm-quit-hook (cons 'company-abort helm-quit-hook)))
+           (when company-point
+             ;; There SHOULD be a company-point if company-complete was run. This
+             ;; is from some old code and I'm not bold enough to delete this
+             ;; conditional.
+             (helm :sources 'helm-source-company
+                   :buffer  "*helm company*"
+                   :input initial-pattern
+                   :candidate-number-limit helm-company-candidate-number-limit))))))
 
 (provide 'helm-company)
 
