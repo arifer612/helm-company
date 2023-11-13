@@ -133,15 +133,11 @@ annotations.")
 
 (defun helm-company-action-insert (candidate)
   "Insert CANDIDATE."
-  (let* ((company-candidates (helm-attr 'company-candidates))
-         (company-backend (helm-attr 'company-backend))
-         (company-common (helm-attr 'company-common))
-         (company-prefix (helm-attr 'company-prefix)))
-    ;; `company-manual-begin' keeps company from throwing an error in
-    ;; `company-post-command', its post-command hook.
-    (when (company-manual-begin)
-      (company-finish candidate)
-      (run-hooks 'helm-company-after-completion-hooks))))
+  ;; `company-manual-begin' keeps company from throwing an error in
+  ;; `company-post-command', its post-command hook.
+  (when (company-manual-begin)
+    (company-finish candidate)
+    (run-hooks 'helm-company-after-completion-hooks)))
 
 (defun helm-company-action-show-document (candidate)
   "Show the documentation of the CANDIDATE."
