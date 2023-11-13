@@ -125,7 +125,7 @@ annotations.")
           helm-company-candidates              company-candidates
           helm-company-display-candidates-hash (helm-company--make-display-candidate-hash company-candidates))))
 
-(defun helm-company-cleanup-post-action ()
+(defun helm-company-cleanup-post-command ()
   (helm-attrset 'company-candidates nil)
   (setq helm-company-backend             nil
         helm-company-candidates          nil
@@ -304,7 +304,9 @@ company-backend."
             ;(list "position -> int"))
     :filtered-candidate-transformer 'helm-company-get-formatted-display-strings
     :display-to-real 'helm-company-get-real-candidate
-    :cleanup 'helm-company-cleanup-post-action
+    ;; No :cleanup. It is executed before the action, and we still need the
+    ;; vars. Cleanup can be added later in a one-shot post-command-hook function
+    ;; to cleanup helm-company vars and remove itself from the hook.
     :fuzzy-match helm-company-fuzzy-match
     :keymap helm-company-map
     :persistent-action 'helm-company-show-doc-buffer
