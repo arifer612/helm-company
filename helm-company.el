@@ -114,10 +114,10 @@ annotations.")
 
 (defun helm-company-init ()
   "Prepare helm for company."
-  (helm-attrset 'company-candidates company-candidates)
-  (helm-attrset 'company-common company-common)
-  (helm-attrset 'company-prefix company-prefix)
-  (helm-attrset 'company-backend company-backend)
+  (helm-set-attr 'company-candidates company-candidates)
+  (helm-set-attr 'company-common company-common)
+  (helm-set-attr 'company-prefix company-prefix)
+  (helm-set-attr 'company-backend company-backend)
   (setq helm-company-help-window nil)
   (if (< (length company-candidates) 1)
       (helm-exit-minibuffer)
@@ -126,7 +126,7 @@ annotations.")
           helm-company-display-candidates-hash (helm-company--make-display-candidate-hash company-candidates))))
 
 (defun helm-company-cleanup-post-command ()
-  (helm-attrset 'company-candidates nil)
+  (helm-set-attr 'company-candidates nil)
   (setq helm-company-backend             nil
         helm-company-candidates          nil
         helm-company-display-candidates-hash nil))
